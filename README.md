@@ -1,17 +1,6 @@
-### ECG fine-tuning project
+# ECG fine-tuning project
 
-# By: Tal Noy, Ofek Sapir
-
-
-
-Dataset:
-- PTB-XL
-
-Baselines:
-- ECG-FM fine-tuned model over MIMIC-IV-ECG with classification head adjusted to PTB-XL labels
-- Transformer initliazied randomly
-
-
+### By: Tal Noy, Ofek Sapir
 
 ---
 
