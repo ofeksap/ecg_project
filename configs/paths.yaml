@@ -18,4 +18,4 @@ mimic_finetuned_model: /media/2TB/ecg_project/checkpoints/ecgfm/mimic_iv_ecg_fin
 output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/pretrained_exp_001
 output_dir_pretrained: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/pretrained_exp_001
 output_dir_mimic_finetuned: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/mimic_finetuned_exp_001
-baseline_output_dir: /media/2TB/ecg_project/runs/transformer_baseline/exp_001
+baseline_output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/transformer_baseline_exp_001
