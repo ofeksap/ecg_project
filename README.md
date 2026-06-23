@@ -1,6 +1,8 @@
-ECG fine-tuning project
+### ECG fine-tuning project
 
-Tal Noy, Ofek Sapir
+# By: Tal Noy, Ofek Sapir
+
+
 
 Dataset:
 - PTB-XL
@@ -9,9 +11,7 @@ Baselines:
 - ECG-FM fine-tuned model over MIMIC-IV-ECG with classification head adjusted to PTB-XL labels
 - Transformer initliazied randomly
 
-Compute: 
-- GPU Model: NVIDIA GeForce RTX 3080 Ti with 12 GB total VRAM
-- Driver & CUDA: Nvidia driver 535.274.02, supports CUDA 12.2
+
 
 ---
 
@@ -130,3 +130,4 @@ For the MIMIC experiment, point `--checkpoint` at `mimic_finetuned_exp_001/check
 - **MIMIC checkpoint:** the downloaded `mimic_iv_ecg_finetuned.pt` references a path on the authors' cluster. Used the converted `mimic_iv_ecg_finetuned_encoder.pt` for training (see `06_patch_mimic_checkpoint.py`).
 - **Disk usage:** set `checkpoint.keep_last_epochs=1` in training scripts to avoid keeping all 140 epoch checkpoints (~1 GB each).
 - **Shared code:** `scripts/ecg_common.py` holds path loading, fairseq inference, and prediction export used by scripts 08–010.
+- **Compute:** GPU Model was NVIDIA GeForce RTX 3080 Ti with 12 GB total VRAM, with Nvidia driver 535.274.02, supports CUDA 12.2.
