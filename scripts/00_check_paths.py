@@ -36,16 +36,23 @@ def main() -> int:
     paths = load_paths()
     raw_ptbxl = paths["raw_ptbxl"]
     pretrained_model = paths["pretrained_model"]
+    mimic_finetuned_model = paths.get("mimic_finetuned_model")
 
     checks = [
         ("PTB-XL raw folder", raw_ptbxl, True),
         ("ptbxl_database.csv", raw_ptbxl / "ptbxl_database.csv", False),
         ("scp_statements.csv", raw_ptbxl / "scp_statements.csv", False),
         ("records500/", raw_ptbxl / "records500", True),
-        ("ECG-FM checkpoint", pretrained_model, False),
+        ("ECG-FM pretrained checkpoint", pretrained_model, False),
     ]
 
     results = [check_path(label, path, expect_dir=expect_dir) for label, path, expect_dir in checks]
+
+    if mimic_finetuned_model is not None:
+        mimic_ok = check_path("ECG-FM MIMIC-finetuned checkpoint", mimic_finetuned_model, expect_dir=False)
+        if not mimic_ok:
+            print("[WARN] mimic_iv_ecg_finetuned.pt is required for script 06 only.")
+        results.append(True)
     if all(results):
         print("\nAll required paths exist.")
         return 0

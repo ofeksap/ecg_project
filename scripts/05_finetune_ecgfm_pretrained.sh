@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fine-tune ECG-FM (fairseq-signals ecg_transformer_classifier) on PTB-XL subclasses.
+# Fine-tune ECG-FM from the PhysioNet-pretrained checkpoint on PTB-XL subclasses.
 #
 # Prerequisites:
 #   1. Clone/install fairseq-signals into external/fairseq-signals
@@ -25,7 +25,7 @@ FAIRSEQ_SIGNALS_ROOT="$(read_path fairseq_signals_root)"
 PRETRAINED_MODEL="$(read_path pretrained_model)"
 LABEL_DIR="$(read_path labels_dir)"
 MANIFEST_DIR="$(read_path manifest_dir)"
-OUTPUT_DIR="$(read_path output_dir)"
+OUTPUT_DIR="$(read_path output_dir_pretrained)"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -106,8 +106,17 @@ export PYTHONPATH="$FAIRSEQ_SIGNALS_ROOT${PYTHONPATH:+:$PYTHONPATH}"
     checkpoint.save_dir="$OUTPUT_DIR" \
     checkpoint.save_interval=1 \
     checkpoint.keep_last_epochs=0 \
+    checkpoint.best_checkpoint_metric=auroc \
+    checkpoint.maximize_best_checkpoint_metric=true \
     common.log_format=csv \
     +task.label_file="$LABEL_DIR/y.npy" \
     +criterion.pos_weight="$POS_WEIGHT" \
     --config-dir "$CONFIG_DIR" \
     --config-name diagnosis
+
+if [[ ! -f "$OUTPUT_DIR/checkpoint_best.pt" ]]; then
+  echo "Training finished but checkpoint_best.pt was not created."
+  exit 1
+fi
+
+echo "Saved best checkpoint to $OUTPUT_DIR/checkpoint_best.pt"

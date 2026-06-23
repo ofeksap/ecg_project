@@ -13,5 +13,9 @@ waveform_dir: /media/2TB/ecg_project/data/processed/ptbxl_subclass_5s_500hz/wave
 ecgfm_root: /media/2TB/ecg_project/external/ECG-FM
 fairseq_signals_root: /media/2TB/ecg_project/external/fairseq-signals
 pretrained_model: /media/2TB/ecg_project/checkpoints/ecgfm/mimic_iv_ecg_physionet_pretrained.pt
+mimic_finetuned_model: /media/2TB/ecg_project/checkpoints/ecgfm/mimic_iv_ecg_finetuned_encoder.pt
 
-output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/exp_001
+output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/pretrained_exp_001
+output_dir_pretrained: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/pretrained_exp_001
+output_dir_mimic_finetuned: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/mimic_finetuned_exp_001
+baseline_output_dir: /media/2TB/ecg_project/runs/transformer_baseline/exp_001
