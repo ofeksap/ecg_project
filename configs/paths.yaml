@@ -2,20 +2,26 @@ project_root: /media/2TB/ecg_project
 
 raw_ptbxl: /media/2TB/ecg_project/data/raw/physionet.org/files/ptb-xl/1.0.3
 
-processed_root: /media/2TB/ecg_project/data/processed/ptbxl_subclass_5s_500hz
+# Active waveform split method (must match script 02 --split-method when preparing data).
+split_method: overlap_2p5
+
 label_mode: diagnostic_subclass
 
-labels_dir: /media/2TB/ecg_project/data/processed/ptbxl_subclass_5s_500hz/labels
-manifest_dir: /media/2TB/ecg_project/data/processed/ptbxl_subclass_5s_500hz/manifests
-metadata_dir: /media/2TB/ecg_project/data/processed/ptbxl_subclass_5s_500hz/metadata
-waveform_dir: /media/2TB/ecg_project/data/processed/ptbxl_subclass_5s_500hz/waveforms
+# Each split method gets its own processed folder (do not share between methods).
+processed_root: /media/2TB/ecg_project/data/processed/ptbxl_subclass_{split_method}
+
+labels_dir: "{processed_root}/labels"
+lead_mean_path: "{processed_root}/labels/lead_mean.txt"
+lead_std_path: "{processed_root}/labels/lead_std.txt"
+manifest_dir: "{processed_root}/manifests"
+metadata_dir: "{processed_root}/metadata"
+waveform_dir: "{processed_root}/waveforms"
 
 ecgfm_root: /media/2TB/ecg_project/external/ECG-FM
 fairseq_signals_root: /media/2TB/ecg_project/external/fairseq-signals
 pretrained_model: /media/2TB/ecg_project/checkpoints/ecgfm/mimic_iv_ecg_physionet_pretrained.pt
 mimic_finetuned_model: /media/2TB/ecg_project/checkpoints/ecgfm/mimic_iv_ecg_finetuned_encoder.pt
 
-output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/pretrained_exp_001
-output_dir_pretrained: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/pretrained_exp_001
-output_dir_mimic_finetuned: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/mimic_finetuned_exp_001
-baseline_output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/transformer_baseline_exp_001
+output_dir_pretrained: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/{split_method}/pretrained_exp_001
+output_dir_mimic_finetuned: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/{split_method}/mimic_finetuned_exp_001
+baseline_output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/{split_method}/transformer_baseline_exp_001

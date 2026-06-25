@@ -19,7 +19,11 @@ import pandas as pd
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from ecg_common import load_paths, load_test_ground_truth  # noqa: E402
+from ecg_common import (  # noqa: E402
+    aggregate_logits_by_record,
+    load_paths,
+    load_test_ground_truth,
+)
 
 
 def _safe_auroc(y_true: np.ndarray, y_score: np.ndarray) -> float:
@@ -72,24 +76,36 @@ def _micro_metrics(y_true: np.ndarray, y_pred: np.ndarray, y_score: np.ndarray) 
     return metrics
 
 
-def load_prediction_arrays(predictions_dir: Path) -> tuple[np.ndarray, np.ndarray]:
-    logits_path = predictions_dir / "test_logits.npy"
-    preds_path = predictions_dir / "test_predictions.npy"
+def load_prediction_arrays(
+    predictions_dir: Path,
+    *,
+    record_level: bool = False,
+    segment_meta: pd.DataFrame | None = None,
+    aggregate: str = "mean",
+) -> tuple[np.ndarray, np.ndarray]:
+    prefix = "record_" if record_level else ""
+    logits_path = predictions_dir / f"{prefix}test_logits.npy"
+    preds_path = predictions_dir / f"{prefix}test_predictions.npy"
 
     if logits_path.is_file():
         logits = np.load(logits_path)
-        probs = 1.0 / (1.0 + np.exp(-logits))
-        preds = (probs >= 0.5).astype(np.int8)
-        return logits.astype(np.float32), preds
-
-    if preds_path.is_file():
+    elif record_level and (predictions_dir / "test_logits.npy").is_file():
+        if segment_meta is None:
+            raise ValueError("segment_meta required to aggregate segment logits at eval time")
+        seg_logits = np.load(predictions_dir / "test_logits.npy")
+        logits, _ = aggregate_logits_by_record(seg_logits, segment_meta, aggregate=aggregate)
+    elif preds_path.is_file():
         preds = np.load(preds_path)
         return preds.astype(np.float32), preds.astype(np.int8)
+    else:
+        raise FileNotFoundError(
+            f"Missing prediction files in {predictions_dir}. "
+            f"Expected {prefix}test_logits.npy or {prefix}test_predictions.npy."
+        )
 
-    raise FileNotFoundError(
-        f"Missing prediction files in {predictions_dir}. "
-        "Expected test_logits.npy or test_predictions.npy."
-    )
+    probs = 1.0 / (1.0 + np.exp(-logits))
+    preds = (probs >= 0.5).astype(np.int8)
+    return logits.astype(np.float32), preds
 
 
 def compute_metrics(
@@ -164,6 +180,15 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Output directory for metrics tables (defaults to <predictions-dir>/metrics).",
     )
+    parser.add_argument(
+        "--aggregate-records",
+        choices=("none", "mean"),
+        default="none",
+        help=(
+            "Evaluate at 10 s record level by mean-aggregating segment predictions "
+            "per ecg_id (uses record_test_*.npy if present)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -173,10 +198,21 @@ def main() -> int:
 
     labels_dir = args.labels_dir or paths["labels_dir"]
     metadata_dir = args.metadata_dir or paths["metadata_dir"]
-    metrics_dir = args.metrics_dir or (args.predictions_dir / "metrics")
 
-    y_true, _, label_names = load_test_ground_truth(labels_dir, metadata_dir)
-    y_score, y_pred = load_prediction_arrays(args.predictions_dir)
+    record_level = args.aggregate_records == "mean"
+    y_true, _, label_names = load_test_ground_truth(
+        labels_dir, metadata_dir, record_level=record_level
+    )
+    segment_meta = None
+    if record_level:
+        _, segment_meta, _ = load_test_ground_truth(labels_dir, metadata_dir)
+
+    y_score, y_pred = load_prediction_arrays(
+        args.predictions_dir,
+        record_level=record_level,
+        segment_meta=segment_meta,
+        aggregate=args.aggregate_records,
+    )
 
     if y_pred.shape != y_true.shape:
         print(
@@ -185,6 +221,13 @@ def main() -> int:
         return 1
 
     per_label, summary, report = compute_metrics(y_true, y_pred, y_score, label_names)
+    report["eval_level"] = "record" if record_level else "segment"
+    if record_level:
+        report["aggregate"] = args.aggregate_records
+
+    metrics_dir = args.metrics_dir or (args.predictions_dir / "metrics")
+    if record_level:
+        metrics_dir = metrics_dir / "record"
 
     metrics_dir.mkdir(parents=True, exist_ok=True)
     per_label.to_csv(metrics_dir / "metrics_per_label.csv", index=False)

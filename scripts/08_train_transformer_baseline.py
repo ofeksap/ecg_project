@@ -21,6 +21,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from ecg_common import (  # noqa: E402
+    aggregate_logits_by_record,
     build_fairseq_train_cmd,
     load_paths,
     load_test_ground_truth,
@@ -85,6 +86,17 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip training and only run test inference from an existing checkpoint.",
     )
+    parser.add_argument(
+        "--normalize",
+        action="store_true",
+        help="Enable per-lead z-score normalization (overrides diagnosis.yaml).",
+    )
+    parser.add_argument(
+        "--aggregate-records",
+        choices=("none", "mean"),
+        default="none",
+        help="Mean-aggregate segment logits per ecg_id and save record_test_* files.",
+    )
     return parser.parse_args()
 
 
@@ -103,6 +115,14 @@ def main() -> int:
     env["PYTHONPATH"] = f"{fairseq_root}{os.pathsep}{env.get('PYTHONPATH', '')}"
 
     if not args.skip_train:
+        normalize_paths = None
+        if args.normalize:
+            mean_path = paths.get("lead_mean_path")
+            std_path = paths.get("lead_std_path")
+            if mean_path is None or std_path is None:
+                raise ValueError("paths.yaml must define lead_mean_path and lead_std_path")
+            normalize_paths = (Path(mean_path), Path(std_path))
+
         cmd = build_fairseq_train_cmd(
             fairseq_root,
             paths["manifest_dir"],
@@ -112,6 +132,9 @@ def main() -> int:
             pos_weight,
             model_path=None,
             no_pretrained_weights=True,
+            normalize=args.normalize,
+            mean_path=normalize_paths[0] if normalize_paths else None,
+            std_path=normalize_paths[1] if normalize_paths else None,
         )
         print("Running:", " ".join(cmd))
         subprocess.run(cmd, check=True, env=env)
@@ -135,8 +158,21 @@ def main() -> int:
     verify_test_logits(logits, test_meta, label_names)
     save_test_predictions(predictions_dir, logits, test_meta, label_names)
 
+    if args.aggregate_records == "mean":
+        record_logits, record_meta = aggregate_logits_by_record(
+            logits, test_meta, aggregate="mean"
+        )
+        save_test_predictions(
+            predictions_dir,
+            record_logits,
+            record_meta,
+            label_names,
+            prefix="record_",
+        )
+        print("Record-level logits shape:", record_logits.shape)
+
     print("Saved test predictions to:", predictions_dir)
-    print("Logits shape:", logits.shape)
+    print("Segment logits shape:", logits.shape)
     return 0
 
 

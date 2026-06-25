@@ -5,25 +5,35 @@
 #   1. Clone/install fairseq-signals into external/fairseq-signals
 #   2. Run scripts 01-04 to build labels, waveforms, manifests, and validate data
 #   3. Ensure .mat files contain an ``idx`` field aligned with labels/y.npy rows
+#
+# Optional:
+#   --normalize   Not supported (pretrained checkpoints use normalize=false)
 set -euo pipefail
 
 PROJECT_ROOT=/media/2TB/ecg_project
 PATHS_FILE="$PROJECT_ROOT/configs/paths.yaml"
 
-read_path() {
-    python3 - "$PATHS_FILE" "$1" <<'PY'
-import sys
-import yaml
-from pathlib import Path
+USE_NORMALIZE=false
+for arg in "$@"; do
+  if [[ "$arg" == "--normalize" ]]; then
+    USE_NORMALIZE=true
+  fi
+done
 
-paths = yaml.safe_load(Path(sys.argv[1]).read_text())
-print(paths[sys.argv[2]])
+read_path() {
+    python3 - "$1" <<PY
+import sys
+sys.path.insert(0, "$PROJECT_ROOT/scripts")
+from ecg_common import load_paths
+print(load_paths()[sys.argv[1]])
 PY
 }
 
 FAIRSEQ_SIGNALS_ROOT="$(read_path fairseq_signals_root)"
 PRETRAINED_MODEL="$(read_path pretrained_model)"
 LABEL_DIR="$(read_path labels_dir)"
+LEAD_MEAN_PATH="$(read_path lead_mean_path)"
+LEAD_STD_PATH="$(read_path lead_std_path)"
 MANIFEST_DIR="$(read_path manifest_dir)"
 OUTPUT_DIR="$(read_path output_dir_pretrained)"
 
@@ -35,7 +45,29 @@ echo "PRETRAINED_MODEL:      $PRETRAINED_MODEL"
 echo "LABEL_DIR:             $LABEL_DIR"
 echo "MANIFEST_DIR:          $MANIFEST_DIR"
 echo "OUTPUT_DIR:            $OUTPUT_DIR"
+echo "NORMALIZE:             $USE_NORMALIZE"
 echo
+
+NORMALIZE_ARGS=()
+if [[ "$USE_NORMALIZE" == true ]]; then
+  cat <<'EOF'
+ERROR: --normalize is not supported for ECG-FM fine-tuning (scripts 05/06).
+
+The released PhysioNet/MIMIC checkpoints were pretrained with task.normalize=false.
+fairseq-signals refuses to load them when fine-tuning with --normalize.
+
+Options:
+  1. Run without --normalize (gain-corrected waveforms only; matches pretraining):
+       bash scripts/05_finetune_ecgfm_pretrained.sh
+
+  2. For z-score experiments, use the random-init baseline (script 08):
+       python3 scripts/08_train_transformer_baseline.py --normalize
+
+See README exp_002 notes for comparing split methods at record level without
+conflicting with the pretrained encoder normalization settings.
+EOF
+  exit 1
+fi
 
 # ---- sanity checks ----
 test -d "$FAIRSEQ_SIGNALS_ROOT" || { echo "Missing FAIRSEQ_SIGNALS_ROOT: $FAIRSEQ_SIGNALS_ROOT"; exit 1; }
@@ -105,12 +137,13 @@ export PYTHONPATH="$FAIRSEQ_SIGNALS_ROOT${PYTHONPATH:+:$PYTHONPATH}"
     distributed_training.find_unused_parameters=True \
     checkpoint.save_dir="$OUTPUT_DIR" \
     checkpoint.save_interval=1 \
-    checkpoint.keep_last_epochs=0 \
+    checkpoint.keep_last_epochs=1 \
     checkpoint.best_checkpoint_metric=auroc \
     checkpoint.maximize_best_checkpoint_metric=true \
     common.log_format=csv \
     +task.label_file="$LABEL_DIR/y.npy" \
     +criterion.pos_weight="$POS_WEIGHT" \
+    "${NORMALIZE_ARGS[@]}" \
     --config-dir "$CONFIG_DIR" \
     --config-name diagnosis
 

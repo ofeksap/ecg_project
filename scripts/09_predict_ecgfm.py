@@ -16,6 +16,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from ecg_common import (  # noqa: E402
+    aggregate_logits_by_record,
     load_paths,
     load_test_ground_truth,
     run_fairseq_test_inference,
@@ -61,6 +62,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument(
+        "--aggregate-records",
+        choices=("none", "mean"),
+        default="none",
+        help=(
+            "After segment inference, mean-aggregate logits per ecg_id and save "
+            "record_test_*.npy/csv for 10 s record-level evaluation."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -90,9 +100,22 @@ def main() -> int:
     verify_test_logits(logits, test_meta, label_names)
     save_test_predictions(output_dir, logits, test_meta, label_names)
 
+    if args.aggregate_records == "mean":
+        record_logits, record_meta = aggregate_logits_by_record(
+            logits, test_meta, aggregate="mean"
+        )
+        save_test_predictions(
+            output_dir,
+            record_logits,
+            record_meta,
+            label_names,
+            prefix="record_",
+        )
+        print("Record-level logits shape:", record_logits.shape)
+
     print("Checkpoint:", checkpoint)
     print("Saved test predictions to:", output_dir)
-    print("Logits shape:", logits.shape)
+    print("Segment logits shape:", logits.shape)
     return 0
 
 

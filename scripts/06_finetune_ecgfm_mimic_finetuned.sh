@@ -9,19 +9,27 @@
 #   2. Run scripts/patch_mimic_checkpoint.py (auto-run below if encoder ckpt missing)
 #   3. Clone/install fairseq-signals into external/fairseq-signals
 #   4. Run scripts 01-04 to build labels, waveforms, manifests, and validate data
+#
+# Optional:
+#   --normalize   Not supported (pretrained checkpoints use normalize=false)
 set -euo pipefail
 
 PROJECT_ROOT=/media/2TB/ecg_project
 PATHS_FILE="$PROJECT_ROOT/configs/paths.yaml"
 
-read_path() {
-    python3 - "$PATHS_FILE" "$1" <<'PY'
-import sys
-import yaml
-from pathlib import Path
+USE_NORMALIZE=false
+for arg in "$@"; do
+  if [[ "$arg" == "--normalize" ]]; then
+    USE_NORMALIZE=true
+  fi
+done
 
-paths = yaml.safe_load(Path(sys.argv[1]).read_text())
-print(paths[sys.argv[2]])
+read_path() {
+    python3 - "$1" <<PY
+import sys
+sys.path.insert(0, "$PROJECT_ROOT/scripts")
+from ecg_common import load_paths
+print(load_paths()[sys.argv[1]])
 PY
 }
 
@@ -30,6 +38,8 @@ MIMIC_FINETUNED_MODEL="$(read_path mimic_finetuned_model)"
 PRETRAINED_MODEL="$(read_path pretrained_model)"
 MIMIC_CLASSIFIER="$PROJECT_ROOT/checkpoints/ecgfm/mimic_iv_ecg_finetuned.pt"
 LABEL_DIR="$(read_path labels_dir)"
+LEAD_MEAN_PATH="$(read_path lead_mean_path)"
+LEAD_STD_PATH="$(read_path lead_std_path)"
 MANIFEST_DIR="$(read_path manifest_dir)"
 OUTPUT_DIR="$(read_path output_dir_mimic_finetuned)"
 
@@ -41,7 +51,22 @@ echo "MIMIC_FINETUNED_MODEL:   $MIMIC_FINETUNED_MODEL"
 echo "LABEL_DIR:               $LABEL_DIR"
 echo "MANIFEST_DIR:            $MANIFEST_DIR"
 echo "OUTPUT_DIR:              $OUTPUT_DIR"
+echo "NORMALIZE:               $USE_NORMALIZE"
 echo
+
+NORMALIZE_ARGS=()
+if [[ "$USE_NORMALIZE" == true ]]; then
+  cat <<'EOF'
+ERROR: --normalize is not supported for ECG-FM fine-tuning (scripts 05/06).
+
+The released PhysioNet/MIMIC checkpoints were pretrained with task.normalize=false.
+fairseq-signals refuses to load them when fine-tuning with --normalize.
+
+Run without --normalize:
+  bash scripts/06_finetune_ecgfm_mimic_finetuned.sh
+EOF
+  exit 1
+fi
 
 # ---- sanity checks ----
 test -d "$FAIRSEQ_SIGNALS_ROOT" || { echo "Missing FAIRSEQ_SIGNALS_ROOT: $FAIRSEQ_SIGNALS_ROOT"; exit 1; }
@@ -136,6 +161,7 @@ export PYTHONPATH="$FAIRSEQ_SIGNALS_ROOT${PYTHONPATH:+:$PYTHONPATH}"
     common.log_format=csv \
     +task.label_file="$LABEL_DIR/y.npy" \
     +criterion.pos_weight="$POS_WEIGHT" \
+    "${NORMALIZE_ARGS[@]}" \
     --config-dir "$CONFIG_DIR" \
     --config-name diagnosis
 

@@ -22,27 +22,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import scipy.io
-import yaml
 from tqdm import tqdm
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PATHS_FILE = PROJECT_ROOT / "configs" / "paths.yaml"
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from ecg_common import load_paths  # noqa: E402
 
 SPLIT_FOLDS = {
     "train": set(range(1, 9)),
     "valid": {9},
     "test": {10},
 }
-
-
-def load_paths() -> dict[str, Path | str]:
-    """Load project paths from ``configs/paths.yaml``."""
-    with PATHS_FILE.open() as f:
-        raw = yaml.safe_load(f)
-    return {
-        key: Path(value) if key != "label_mode" else value
-        for key, value in raw.items()
-    }
 
 
 def fail(msg: str) -> None:

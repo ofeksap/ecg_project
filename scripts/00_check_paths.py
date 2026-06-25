@@ -6,16 +6,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import yaml
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PATHS_FILE = PROJECT_ROOT / "configs" / "paths.yaml"
-
-
-def load_paths() -> dict[str, Path]:
-    with PATHS_FILE.open() as f:
-        raw = yaml.safe_load(f)
-    return {key: Path(value) for key, value in raw.items()}
+from ecg_common import PATHS_FILE, load_paths  # noqa: E402
 
 
 def check_path(label: str, path: Path, *, expect_dir: bool = False) -> bool:
@@ -34,6 +28,10 @@ def main() -> int:
         return 1
 
     paths = load_paths()
+    split_method = paths.get("split_method")
+    if split_method is not None:
+        print(f"split_method: {split_method}")
+
     raw_ptbxl = paths["raw_ptbxl"]
     pretrained_model = paths["pretrained_model"]
     mimic_finetuned_model = paths.get("mimic_finetuned_model")

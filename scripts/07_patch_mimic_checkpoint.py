@@ -20,16 +20,11 @@ import sys
 from pathlib import Path
 
 import torch
-import yaml
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PATHS_FILE = PROJECT_ROOT / "configs" / "paths.yaml"
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
 
-
-def load_paths() -> dict[str, Path | str]:
-    with PATHS_FILE.open() as f:
-        raw = yaml.safe_load(f)
-    return {key: Path(value) if key != "label_mode" else value for key, value in raw.items()}
+from ecg_common import load_paths  # noqa: E402
 
 
 def extract_encoder_state(
