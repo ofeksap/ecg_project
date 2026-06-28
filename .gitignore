@@ -5,7 +5,10 @@ data/processed/
 
 # Model checkpoints / training outputs
 checkpoints/
-runs/
+runs/**
+!runs/**/
+!runs/**/predictions/metrics/
+!runs/**/predictions/metrics/**
 
 # Caches
 .cache/
