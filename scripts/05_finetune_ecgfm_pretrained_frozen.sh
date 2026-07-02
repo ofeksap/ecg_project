@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Fine-tune ECG-FM from the PhysioNet-pretrained checkpoint on PTB-XL subclasses.
+# Train a linear classifier on PTB-XL with a frozen ECG-FM encoder (exp_003).
+#
+# Only the new Linear(768 -> num_labels) head is updated; the pretrained encoder
+# runs under no_grad via model.freeze_finetune_updates. Same data and fairseq
+# config as script 05, with a higher LR and fewer epochs suited to linear probing.
 #
 # Prerequisites:
 #   1. Clone/install fairseq-signals into external/fairseq-signals
 #   2. Run scripts 01-04 to build labels, waveforms, manifests, and validate data
-#   3. Ensure .mat files contain an ``idx`` field aligned with labels/y.npy rows
-#
-# Optional:
-#   --normalize   Not supported (pretrained checkpoints use normalize=false)
+#   3. Ensure mimic_iv_ecg_physionet_pretrained.pt is in checkpoints/ecgfm/
+
 set -euo pipefail
 
 PROJECT_ROOT=/media/2TB/ecg_project
@@ -32,10 +34,8 @@ PY
 FAIRSEQ_SIGNALS_ROOT="$(read_path fairseq_signals_root)"
 PRETRAINED_MODEL="$(read_path pretrained_model)"
 LABEL_DIR="$(read_path labels_dir)"
-LEAD_MEAN_PATH="$(read_path lead_mean_path)"
-LEAD_STD_PATH="$(read_path lead_std_path)"
 MANIFEST_DIR="$(read_path manifest_dir)"
-OUTPUT_DIR="$(read_path output_dir_pretrained)"
+OUTPUT_DIR="$(read_path output_dir_pretrained_frozen)"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -45,6 +45,7 @@ echo "PRETRAINED_MODEL:      $PRETRAINED_MODEL"
 echo "LABEL_DIR:             $LABEL_DIR"
 echo "MANIFEST_DIR:          $MANIFEST_DIR"
 echo "OUTPUT_DIR:            $OUTPUT_DIR"
+echo "ENCODER:               frozen (linear probe on PTB-XL)"
 echo "NORMALIZE:             $USE_NORMALIZE"
 echo
 
@@ -56,15 +57,8 @@ ERROR: --normalize is not supported for ECG-FM fine-tuning (scripts 05/06).
 The released PhysioNet/MIMIC checkpoints were pretrained with task.normalize=false.
 fairseq-signals refuses to load them when fine-tuning with --normalize.
 
-Options:
-  1. Run without --normalize (gain-corrected waveforms only; matches pretraining):
-       bash scripts/05_finetune_ecgfm_pretrained.sh
-
-  2. For z-score experiments, use the random-init baseline (script 08):
-       python3 scripts/08_train_transformer_baseline.py --normalize
-
-See README exp_002 notes for comparing split methods at record level without
-conflicting with the pretrained encoder normalization settings.
+Run without --normalize:
+  bash scripts/05_finetune_ecgfm_pretrained_frozen.sh
 EOF
   exit 1
 fi
@@ -127,9 +121,11 @@ export PYTHONPATH="$FAIRSEQ_SIGNALS_ROOT${PYTHONPATH:+:$PYTHONPATH}"
     task.data="$MANIFEST_DIR" \
     model.model_path="$PRETRAINED_MODEL" \
     model.num_labels="$NUM_LABELS" \
-    optimization.lr='[1e-06]' \
-    optimization.max_epoch=140 \
+    model.freeze_finetune_updates=1000000 \
+    +model.dropout_features=0.0 \
+    optimization.lr='[1e-03]' \
     optimization.max_update=0 \
+    optimization.max_epoch=50 \
     dataset.batch_size=16 \
     dataset.num_workers=5 \
     dataset.valid_subset=valid \
