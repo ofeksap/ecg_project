@@ -1,27 +1,19 @@
 project_root: /media/2TB/ecg_project
-
 raw_ptbxl: /media/2TB/ecg_project/data/raw/physionet.org/files/ptb-xl/1.0.3
-
-# Active waveform split method (must match script 02 --split-method when preparing data).
-split_method: overlap_2p5
-
+split_method: two_halves
 label_mode: diagnostic_subclass
-
-# Each split method gets its own processed folder (do not share between methods).
 processed_root: /media/2TB/ecg_project/data/processed/ptbxl_subclass_{split_method}
-
-labels_dir: "{processed_root}/labels"
-lead_mean_path: "{processed_root}/labels/lead_mean.txt"
-lead_std_path: "{processed_root}/labels/lead_std.txt"
-manifest_dir: "{processed_root}/manifests"
-metadata_dir: "{processed_root}/metadata"
-waveform_dir: "{processed_root}/waveforms"
-
+labels_dir: '{processed_root}/labels'
+lead_mean_path: '{processed_root}/labels/lead_mean.txt'
+lead_std_path: '{processed_root}/labels/lead_std.txt'
+manifest_dir: '{processed_root}/manifests'
+metadata_dir: '{processed_root}/metadata'
+waveform_dir: '{processed_root}/waveforms'
 ecgfm_root: /media/2TB/ecg_project/external/ECG-FM
 fairseq_signals_root: /media/2TB/ecg_project/external/fairseq-signals
 pretrained_model: /media/2TB/ecg_project/checkpoints/ecgfm/mimic_iv_ecg_physionet_pretrained.pt
 mimic_finetuned_model: /media/2TB/ecg_project/checkpoints/ecgfm/mimic_iv_ecg_finetuned_encoder.pt
-
 output_dir_pretrained: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/{split_method}/pretrained_exp_001
+output_dir_pretrained_frozen: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/{split_method}/pretrained_frozen_exp_003
 output_dir_mimic_finetuned: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/{split_method}/mimic_finetuned_exp_001
 baseline_output_dir: /media/2TB/ecg_project/runs/ecgfm_ptbxl_subclass/{split_method}/transformer_baseline_exp_001
