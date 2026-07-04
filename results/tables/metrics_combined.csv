@@ -1,0 +1,17 @@
+Model,macro auroc,micro auroc
+Per Segment,,
+ECG-FM Pretrained,0.923340955,0.959280476
+ECG-FM Frozen,0.875776405,0.901637585
+ECG-FM MIMIC Fine-tuned,0.914237278,0.956332779
+Transformer Baseline,0.864276563,0.931959265
+ECG-FM Pretrained-2.5s overlap,0.92342678,0.959258469
+ECG-FM Pretrained-1s overlap,0.920618966,0.958060099
+ECG-FM Pretrained-random,0.922742349,0.95759245
+Per Record (mean agg.),,
+ECG-FM Pretrained,0.926850767,0.961367727
+ECG-FM Frozen,0.87658941,0.902630561
+ECG-FM MIMIC Fine-tuned,0.918484669,0.959078731
+Transformer Baseline,0.878402765,0.938584583
+ECG-FM Pretrained-2.5s overlap,0.927688151,0.961635615
+ECG-FM Pretrained-1s overlap,0.924549445,0.96033192
+ECG-FM Pretrained-random,0.922742349,0.95759245
