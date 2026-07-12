@@ -1,0 +1,7 @@
+metric,two_halves,overlap_2p5,overlap_1s,random
+segment_exact_match_rate,0.363,0.382,0.355,0.35
+segment_hamming_error_mean,0.072,0.065,0.067,0.071
+record_exact_match_rate,0.371,0.395,0.368,0.35
+records_all_segments_match_rate,0.308,0.303,0.249,
+records_segment_prediction_disagreement_rate,0.448,0.508,0.615,
+records_partial_segment_match_rate,0.108,0.157,0.211,

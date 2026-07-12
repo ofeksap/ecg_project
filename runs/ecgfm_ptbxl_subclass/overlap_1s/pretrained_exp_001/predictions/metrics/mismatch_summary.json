@@ -1,0 +1,11 @@
+{
+  "num_test_segments": 13188,
+  "num_test_records": 2198,
+  "segment_exact_match_rate": 0.35524719441916897,
+  "segment_hamming_error_mean": 0.06738088016522957,
+  "record_exact_match_rate": 0.36760691537761603,
+  "records_all_segments_match_rate": 0.24931756141947226,
+  "records_any_segment_wrong_rate": 0.7506824385805277,
+  "records_segment_prediction_disagreement_rate": 0.6151046405823476,
+  "records_partial_segment_match_rate": 0.21064604185623295
+}

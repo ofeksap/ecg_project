@@ -29,7 +29,7 @@
       "label": "AMI",
       "support": 306,
       "auroc": 0.9542328206828892,
-      "auprc": 0.7930873640013409,
+      "auprc": 0.7930921001953354,
       "precision": 0.5330812854442344,
       "recall": 0.9215686274509803,
       "f1": 0.6754491017964072
@@ -37,8 +37,8 @@
     {
       "label": "CLBBB",
       "support": 54,
-      "auroc": 0.9973569651741293,
-      "auprc": 0.8908889720778398,
+      "auroc": 0.9973224156992814,
+      "auprc": 0.8758552454480769,
       "precision": 0.8305084745762712,
       "recall": 0.9074074074074074,
       "f1": 0.8672566371681415
@@ -119,7 +119,7 @@
       "label": "LAFB/LPFB",
       "support": 179,
       "auroc": 0.9634146004023232,
-      "auprc": 0.7681857713975091,
+      "auprc": 0.7682855319721298,
       "precision": 0.5959183673469388,
       "recall": 0.8156424581005587,
       "f1": 0.6886792452830188
@@ -154,8 +154,8 @@
     {
       "label": "NORM",
       "support": 963,
-      "auroc": 0.9312009955394117,
-      "auprc": 0.8932820487603819,
+      "auroc": 0.9312009955394116,
+      "auprc": 0.8932823505393994,
       "precision": 0.7667785234899329,
       "recall": 0.9491173416407062,
       "f1": 0.8482598607888631
@@ -218,20 +218,31 @@
   "summary": [
     {
       "average": "macro",
-      "auroc": 0.9227423486675826,
-      "auprc": 0.5008739919975286,
+      "auroc": 0.9227407034544948,
+      "auprc": 0.5001630906602843,
       "precision": 0.38170289652712297,
       "recall": 0.6785107760573544,
       "f1": 0.47417614260662366
     },
     {
       "average": "micro",
-      "auroc": 0.9575924502578248,
-      "auprc": 0.6586188864485315,
+      "auroc": 0.9575924119957906,
+      "auprc": 0.6583914790542658,
       "precision": 0.47579267134991454,
       "recall": 0.8270627062706271,
       "f1": 0.6040737616005786
     }
   ],
-  "eval_level": "segment"
+  "eval_level": "segment",
+  "mismatch_summary": {
+    "num_test_segments": 2198,
+    "num_test_records": 2198,
+    "segment_exact_match_rate": 0.34986351228389445,
+    "segment_hamming_error_mean": 0.0711685948264656,
+    "record_exact_match_rate": 0.34986351228389445,
+    "records_all_segments_match_rate": 0.34986351228389445,
+    "records_any_segment_wrong_rate": 0.6501364877161055,
+    "records_segment_prediction_disagreement_rate": 0.0,
+    "records_partial_segment_match_rate": 0.0
+  }
 }
