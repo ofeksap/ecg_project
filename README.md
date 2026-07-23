@@ -71,7 +71,7 @@ split_method: overlap_2p5
 processed_root: /media/2TB/ecg_project/data/processed/ptbxl_subclass_{split_method}
 ```
 
-Training and evaluation scripts (03–010) read only from `paths.yaml` — no `--split-method` flag needed after data prep.
+Training and evaluation scripts (03–12) read only from `paths.yaml` — no `--split-method` flag needed after data prep.
 
 **Prepare a new split method:**
 
@@ -91,12 +91,20 @@ Training and inference run on **segments**. To evaluate on full **10 s records**
 
 ```bash
 python3 scripts/09_predict_ecgfm.py --aggregate-records mean
-python3 scripts/010_evaluate_predictions.py \
+python3 scripts/10_evaluate_predictions.py \
   --predictions-dir runs/ecgfm_ptbxl_subclass/overlap_2p5/pretrained_exp_001/predictions \
   --aggregate-records mean
 ```
 
-Default (no flag) = segment-level metrics. With `--aggregate-records mean`, script 09 also writes `record_test_*.npy/csv`; script 010 writes metrics under `predictions/metrics/record/`.
+Default (no flag) = segment-level pool metrics. With `--aggregate-records mean`, script 09 also writes `record_test_*.npy/csv`; script 10 additionally writes pool metrics under `predictions/metrics/record/`.
+
+Script 10 always writes mismatch diagnostics under `predictions/metrics/`:
+
+| File | Contents |
+|------|----------|
+| `per_segment.csv` | Per-segment exact match, Hamming error, FP/FN labels |
+| `per_record.csv` | Per-`ecg_id` record match, segment breakdown, disagreement flags |
+| `mismatch_summary.json` | Aggregate rates for comparing split methods |
 
 ## Setup
 
@@ -131,12 +139,16 @@ Run from the project root, in order:
 | 03 | `03_make_manifests.py` | fairseq `train/valid/test.tsv` + symlink split dirs under `waveforms/` |
 | 04 | `04_check_dataset.py` | Validate alignment of labels, manifests, and mats |
 | 05 | `05_finetune_ecgfm_pretrained.sh` | Fine-tune from PhysioNet-pretrained ECG-FM |
+| 05f | `05_finetune_ecgfm_pretrained_frozen.sh` | Linear probe: frozen encoder + trainable head (exp_003) |
 | 06 | `06_finetune_ecgfm_mimic_finetuned.sh` | Fine-tune from MIMIC-finetuned ECG-FM |
+| 07 | `07_patch_mimic_checkpoint.py` | Convert MIMIC release checkpoint → encoder-only file |
 | 08 | `08_train_transformer_baseline.py` | Random-init transformer baseline |
 | 09 | `09_predict_ecgfm.py` | Test-set inference → `test_logits.npy`, `test_predictions.csv` |
-| 010 | `010_evaluate_predictions.py` | AUROC / AUPRC / F1 metrics from saved predictions |
+| 10 | `10_evaluate_predictions.py` | AUROC / AUPRC / F1 + per-segment/record mismatch tables |
+| 11 | `11_visualize_waveform_splits.py` | Plot 10 s ECGs and segment windows per split method |
+| 12 | `12_plot_training_curves.py` | Plot loss / validation AUROC from Hydra CSV logs |
 
-Script `06_patch_mimic_checkpoint.py` converts the released MIMIC classifier checkpoint into an encoder-only file (`mimic_iv_ecg_finetuned_encoder.pt`) for local fine-tuning. Script 06 runs this automatically when needed.
+Script 07 converts the released MIMIC classifier checkpoint into an encoder-only file (`mimic_iv_ecg_finetuned_encoder.pt`). Script 06 runs this automatically when needed.
 
 ### Data prep (example: `two_halves`)
 
@@ -161,6 +173,9 @@ bash scripts/05_finetune_ecgfm_pretrained.sh 2>&1 \
 bash scripts/06_finetune_ecgfm_mimic_finetuned.sh 2>&1 \
   | tee runs/ecgfm_ptbxl_subclass/overlap_2p5/mimic_finetuned_exp_001/train.log
 
+bash scripts/05_finetune_ecgfm_pretrained_frozen.sh 2>&1 \
+  | tee runs/ecgfm_ptbxl_subclass/overlap_2p5/pretrained_frozen_exp_003/train.log
+
 python3 scripts/08_train_transformer_baseline.py 2>&1 \
   | tee runs/ecgfm_ptbxl_subclass/overlap_2p5/transformer_baseline_exp_001/train.log
 ```
@@ -173,11 +188,13 @@ Checkpoints are written to the `output_dir_*` paths in `configs/paths.yaml` (inc
 python3 scripts/09_predict_ecgfm.py \
   --checkpoint runs/ecgfm_ptbxl_subclass/overlap_2p5/pretrained_exp_001/checkpoint_best.pt
 
-python3 scripts/010_evaluate_predictions.py \
+python3 scripts/10_evaluate_predictions.py \
   --predictions-dir runs/ecgfm_ptbxl_subclass/overlap_2p5/pretrained_exp_001/predictions
 ```
 
-For record-level metrics add `--aggregate-records mean` to both scripts. For the MIMIC experiment, point `--checkpoint` at `mimic_finetuned_exp_001/checkpoint_best.pt`.
+For record-level pool metrics add `--aggregate-records mean` to both scripts. For the MIMIC or frozen experiments, point `--checkpoint` at the matching `checkpoint_best.pt`.
+
+Frozen-encoder training uses `output_dir_pretrained_frozen` in `paths.yaml` (exp_003).
 
 ## Outputs
 
@@ -186,15 +203,18 @@ For record-level metrics add `--aggregate-records mean` to both scripts. For the
 | `runs/ecgfm_ptbxl_subclass/{split_method}/<experiment>/` | `checkpoint_best.pt`, `train.log` |
 | `.../predictions/` | `test_logits.npy`, `test_predictions.npy`, `test_predictions.csv` |
 | `.../predictions/record_*` | Record-level predictions (when `--aggregate-records mean` on script 09) |
-| `.../predictions/metrics/` | Segment-level metrics from script 010 |
-| `.../predictions/metrics/record/` | Record-level metrics (when `--aggregate-records mean` on script 010) |
+| `.../predictions/metrics/` | Segment-level pool metrics + mismatch tables from script 10 |
+| `.../predictions/metrics/record/` | Record-level pool metrics (when `--aggregate-records mean` on script 10) |
+| `results/tables/` | Combined AUROC and mismatch summaries across experiments |
+| `results/figures/` | Training curves and waveform split visualizations |
 | `outputs/<date>/<time>/` | Hydra logs and CSV metrics (duplicate of fairseq logging; safe to delete) |
 
 ## Notes
 
 - **MIMIC checkpoint:** the downloaded `mimic_iv_ecg_finetuned.pt` references a path on the authors' cluster. Use the converted `mimic_iv_ecg_finetuned_encoder.pt` for training (see `06_patch_mimic_checkpoint.py`).
 - **Normalization:** waveforms are **gain-corrected** to physical units (script 02). Per-lead z-score (`--normalize`) is **not supported** on scripts 05/06 because the released ECG-FM checkpoints were pretrained with `normalize=false`. Use `--normalize` on script **08** (random-init baseline) only.
-- **Shared code:** `scripts/ecg_common.py` holds path loading (with `{split_method}` expansion), fairseq inference, segment/record aggregation, and prediction export used by scripts 08–010.
+- **Shared code:** `scripts/ecg_common.py` holds path loading (with `{split_method}` expansion), fairseq inference, segment/record aggregation, and prediction export used by scripts 08–10.
+- **Training scripts 05/06/05f are bash** — run with `bash scripts/...`, not `python3`.
 - **Compute:** GPU Model was NVIDIA GeForce RTX 3080 Ti with 12 GB total VRAM, with Nvidia driver 535.274.02, supports CUDA 12.2.
 
 ## Experiments
