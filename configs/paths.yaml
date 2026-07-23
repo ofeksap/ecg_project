@@ -1,6 +1,6 @@
 project_root: /media/2TB/ecg_project
 raw_ptbxl: /media/2TB/ecg_project/data/raw/physionet.org/files/ptb-xl/1.0.3
-split_method: two_halves
+split_method: overlap_2p5
 label_mode: diagnostic_subclass
 processed_root: /media/2TB/ecg_project/data/processed/ptbxl_subclass_{split_method}
 labels_dir: '{processed_root}/labels'
